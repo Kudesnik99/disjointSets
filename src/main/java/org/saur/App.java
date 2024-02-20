@@ -1,7 +1,6 @@
 package org.saur;
 
 import org.saur.disjointset.DisjointSets;
-import org.saur.disjointset.Element;
 
 import java.io.*;
 import java.net.URL;
@@ -14,6 +13,7 @@ public class App {
 
         Pattern pattern = Pattern.compile("(\"\\d*\";)+(\"\\d*\")$");
         URL reference = new URL("https://github.com/PeacockTeam/new-job/releases/download/v1.0/lng-4.txt.gz");
+        String outputFileName = args.length > 1 ? args[1] : "result.txt";
 
         System.out.println(">>> Начало работы " + new Date());
 
@@ -21,7 +21,7 @@ public class App {
         InputStream inputFile;
 
         if (args.length > 0) {
-            String inputFileName=args[0];
+            String inputFileName = args[0];
             inputFile = new FileInputStream(inputFileName);
         } else {
             inputFile = new GZIPInputStream(reference.openStream());
@@ -67,15 +67,15 @@ public class App {
         DisjointSets result = new DisjointSets();
         result.initDisjointSets(splitLines.size());
 
-        for (Map.Entry<Element, Set<Integer>> elementLocatedIn : elementsLocatedIn.entrySet()) {
+        for (Set<Integer> elementLocatedIn : elementsLocatedIn.values()) {
             nextElement:
             // Если элемент присутствует более чем в одной строке -> объединяем эти строки.
-            if (elementLocatedIn.getValue().size() > 1) {
-                for (int lineNumber : elementLocatedIn.getValue()) {
+            if (elementLocatedIn.size() > 1) {
+                for (int lineNumber : elementLocatedIn) {
                     // Для этого пробегаемся по всем группам, чтобы найти ту, в которой находится элемент
                     for (int groupNumber = 0; groupNumber < result.getNodes().size(); groupNumber++) {
                         if (result.find(lineNumber).equals(groupNumber)) {
-                            result.unionAll(groupNumber, elementLocatedIn.getValue());
+                            result.unionAll(groupNumber, elementLocatedIn);
                             break nextElement;
                         }
                     }
@@ -97,9 +97,7 @@ public class App {
 
         System.out.println(">>> Формируем результирующий файл:" + new Date());
 
-        String outputFileName = "result.txt";
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
-
         writer.write("Групп с более чем одним элементом: " + multiStringGroups + "\n\n");
 
         for (int i = 0; i < sortedResult.size(); i++) {
@@ -113,6 +111,9 @@ public class App {
             });
             writer.write("\n");
         }
+
+        writer.flush();
+        writer.close();
 
         System.out.println(">>> Окончание работы: " + new Date());
     }
