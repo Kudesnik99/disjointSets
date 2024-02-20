@@ -73,7 +73,7 @@ public class App {
         String outputFileName = "result.txt";
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
 
-        writer.write("Групп с более чем одним элементом: " + multiStringGroups + "\n");
+        writer.write("Групп с более чем одним элементом: " + multiStringGroups + "\n\n");
 
         for (int i = 0; i < sortedResult.size(); i++) {
             writer.write("Группа " + (i + 1) + "\n");
