@@ -22,15 +22,21 @@ public class App {
         BufferedReader reader = new BufferedReader(isr);
 
         String readLine = reader.readLine();
+        // Если в группе две одинаковых строки - нужно оставить одну. Поэтому Set. Сразу.
         Set<String> inputLines = new HashSet<>(); // Прочитанные строки. Исходник для обработки
 
         while (readLine != null) {
-            if (pattern.matcher(readLine).matches())
+            // Строки вида
+            // "8383"200000741652251""79855053897"83100000580443402";"200000133000191"
+            // являются некорректными и должны пропускаться
+            if (pattern.matcher(readLine).matches()) {
                 inputLines.add(readLine);
+            }
             readLine = reader.readLine();
         }
         gzis.close();
 
+        // Разбиваем строки на элементы
         List<String[]> splitLines = inputLines.stream().map(it -> it.split("[;\\n]")).toList();
 
         System.out.println(">>> Данные получены: " + new Date());
