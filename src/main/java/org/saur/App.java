@@ -66,13 +66,15 @@ public class App {
         }
 
         List<Set<Integer>> sortedResult = groupedResult.values().stream().sorted((set1, set2) -> set2.size() - set1.size()).toList();
+        long multiStringGroups = groupedResult.values().stream().filter(it -> it.size() > 1).count();
 
-        System.out.println(groupedResult.size());
-        System.out.println(sortedResult.size());
+        System.out.println(">>> Формируем результирующий файл:" + new Date());
 
         String outputFileName = "result.txt";
-
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
+
+        writer.write("Групп с более чем одним элементом: " + multiStringGroups + "\n");
+
         for (int i = 0; i < sortedResult.size(); i++) {
             writer.write("Группа " + (i + 1) + "\n");
             sortedResult.get(i).forEach(index -> {
