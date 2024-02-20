@@ -1,4 +1,4 @@
-package org.saur;
+package org.saur.disjointset;
 
 import lombok.Getter;
 
