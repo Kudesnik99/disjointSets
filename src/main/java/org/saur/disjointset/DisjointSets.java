@@ -10,7 +10,6 @@ public class DisjointSets {
     @Getter
     private List<DisjointSetInfo> nodes;
 
-    // ToDo: сделать статический креатор
     public void initDisjointSets(int totalNodes) {
         nodes = new ArrayList<>(totalNodes);
         for (int i = 0; i < totalNodes; i++) {

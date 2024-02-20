@@ -11,16 +11,24 @@ import java.util.zip.GZIPInputStream;
 
 public class App {
     public static void main(String[] args) throws Exception {
+
         Pattern pattern = Pattern.compile("(\"\\d*\";)+(\"\\d*\")$");
+        URL reference = new URL("https://github.com/PeacockTeam/new-job/releases/download/v1.0/lng-4.txt.gz");
 
         System.out.println(">>> Начало работы " + new Date());
 
-        URL website = new URL("https://github.com/PeacockTeam/new-job/releases/download/v1.0/lng-4.txt.gz");
-        GZIPInputStream gzis = new GZIPInputStream(website.openStream());
+        InputStreamReader isr;
+        InputStream inputFile;
 
-        InputStreamReader isr = new InputStreamReader(gzis);
+        if (args.length > 0) {
+            String inputFileName=args[0];
+            inputFile = new FileInputStream(inputFileName);
+        } else {
+            inputFile = new GZIPInputStream(reference.openStream());
+        }
+
+        isr = new InputStreamReader(inputFile);
         BufferedReader reader = new BufferedReader(isr);
-
         String readLine = reader.readLine();
         // Если в группе две одинаковых строки - нужно оставить одну. Поэтому Set. Сразу.
         Set<String> inputLines = new HashSet<>(); // Прочитанные строки. Исходник для обработки
@@ -34,7 +42,7 @@ public class App {
             }
             readLine = reader.readLine();
         }
-        gzis.close();
+        inputFile.close();
 
         // Разбиваем строки на элементы
         List<String[]> splitLines = inputLines.stream().map(it -> it.split("[;\\n]")).toList();
@@ -98,7 +106,7 @@ public class App {
             writer.write("Группа " + (i + 1) + "\n");
             sortedResult.get(i).forEach(index -> {
                 try {
-                    writer.write(Arrays.toString(splitLines.get(index)) + "\n");
+                    writer.write(String.join(";", splitLines.get(index)) + "\n");
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
