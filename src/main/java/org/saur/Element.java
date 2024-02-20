@@ -1,4 +1,4 @@
 package org.saur;
 
-public record Element(Integer column, String value) {
+public record Element(int column, String value) {
 }
