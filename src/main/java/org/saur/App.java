@@ -42,10 +42,11 @@ public class App {
             }
             readLine = reader.readLine();
         }
+        reader.close();
         inputFile.close();
 
         // Разбиваем строки на элементы
-        List<String[]> splitLines = inputLines.stream().map(it -> it.split("[;\\n]")).toList();
+        List<String[]> splitLines = inputLines.stream().map(it -> it.split(";")).toList();
 
         System.out.println(">>> Данные получены: " + new Date());
         System.out.println("--- Количество строк: " + inputLines.size());
