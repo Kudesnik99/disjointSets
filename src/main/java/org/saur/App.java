@@ -53,11 +53,12 @@ public class App {
 
         // Готовим мапу для дальнейшей работы. Key - элемент строки,
         // Value - множество номеров строк в исходном списке, в которых он присутствует
-        Map<Element, Set<Integer>> elementsLocatedIn = new HashMap<>();
+        Map<Element, TreeSet<Integer>> elementsLocatedIn = new HashMap<>();
         for (int i = 0; i < splitLines.size(); i++) {
             for (int columnNumber = 0; columnNumber < splitLines.get(i).length; columnNumber++) {
+                if (splitLines.get(i)[columnNumber].length() < 3) continue;
                 Element element = new Element(columnNumber, splitLines.get(i)[columnNumber]);
-                elementsLocatedIn.computeIfAbsent(element, key -> new HashSet<>()).add(i); // Храним не саму строку, а индекс
+                elementsLocatedIn.computeIfAbsent(element, key -> new TreeSet<>()).add(i); // Храним не саму строку, а индекс
             }
         }
 
