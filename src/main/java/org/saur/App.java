@@ -1,11 +1,13 @@
 package org.saur;
 
 import org.saur.disjointset.DisjointSets;
+import org.w3c.dom.ls.LSOutput;
 
 import java.io.*;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 public class App {
@@ -24,41 +26,55 @@ public class App {
             String inputFileName = args[0];
             inputFile = new FileInputStream(inputFileName);
         } else {
+            System.out.println("Usage: java [-Xmx1G] -jar dsu-1.0.jar [input_file [output_file]]");
+            System.out.println("Default input file is: https://github.com/PeacockTeam/new-job/releases/download/v1.0/lng-4.txt.gz");
+            System.out.println("Default input file is: result.txt");
             inputFile = new GZIPInputStream(reference.openStream());
         }
 
         isr = new InputStreamReader(inputFile);
-        BufferedReader reader = new BufferedReader(isr);
-        String readLine = reader.readLine();
-        // Если в группе две одинаковых строки - нужно оставить одну. Поэтому Set. Сразу.
-        Set<String> inputLines = new HashSet<>(); // Прочитанные строки. Исходник для обработки
 
-        while (readLine != null) {
-            // Строки вида
-            // "8383"200000741652251""79855053897"83100000580443402";"200000133000191"
-            // являются некорректными и должны пропускаться
-            if (pattern.matcher(readLine).matches()) {
-                inputLines.add(readLine);
-            }
-            readLine = reader.readLine();
+        // Если в группе две одинаковых строки - нужно оставить одну. Поэтому Set. Сразу.
+        Set<String> inputLines; // Прочитанные строки. Исходник для обработки
+
+        try (BufferedReader reader = new BufferedReader(isr)) {
+            // Строки вида "8383"200000741652251""79855053897"83100000580443402";"200000133000191"
+            // являются некорректными и должны пропускаться. Поэтому matcher.
+            inputLines = reader.lines().filter(it -> pattern.matcher(it).matches()).collect(Collectors.toSet());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        reader.close();
+
         inputFile.close();
 
         // Разбиваем строки на элементы
-        List<String[]> splitLines = inputLines.stream().map(it -> it.split(";")).toList();
+        List<String[]> splitLines = inputLines.stream().map(line -> line.split(";")).toList();
+        // Находим максимальное кол-во элементов в строке
+        int maxColumnsCount = splitLines.stream().map(it -> it.length).max(Comparator.comparingInt(Integer::intValue)).orElse(0);
 
         System.out.println(">>> Данные получены: " + new Date());
-        System.out.println("--- Количество строк: " + inputLines.size());
+        System.out.println(">>> Количество неповторяющихся строк: " + inputLines.size());
 
-        // Готовим мапу для дальнейшей работы. Key - элемент строки,
-        // Value - множество номеров строк в исходном списке, в которых он присутствует
-        Map<Element, TreeSet<Integer>> elementsLocatedIn = new HashMap<>();
-        for (int i = 0; i < splitLines.size(); i++) {
-            for (int columnNumber = 0; columnNumber < splitLines.get(i).length; columnNumber++) {
-                if (splitLines.get(i)[columnNumber].length() < 3) continue;
-                Element element = new Element(columnNumber, splitLines.get(i)[columnNumber]);
-                elementsLocatedIn.computeIfAbsent(element, key -> new TreeSet<>()).add(i); // Храним не саму строку, а индекс
+        // Готовим мапу для дальнейшей работы:
+        // Key - элемент строки, состоящий из номера столбца и значения,
+        // Value - множество номеров строк в исходном (только разбитом на элементы) списке, в которых присутствует элемент
+        Map<Element, TreeSet<Integer>> elementsFromColumns = new HashMap<>();
+        for (int columnNumber = 0; columnNumber < maxColumnsCount; columnNumber++) {
+            for (int lineNumber = 0; lineNumber < splitLines.size(); lineNumber++) {
+                // Прекращаем проход по элементам, если они закончились (не самая длинная строка) и отфильтровываем пустые элементы
+                if (splitLines.get(lineNumber).length <= columnNumber || splitLines.get(lineNumber)[columnNumber].length() < 3) continue;
+                Element element = new Element(columnNumber, splitLines.get(lineNumber)[columnNumber]);
+                elementsFromColumns.computeIfAbsent(element, key -> new TreeSet<>()).add(lineNumber);
+            }
+
+            // Пробегаемся ещё раз по всем строкам, чтобы удалить множества, состоящие из одной строки. Они нам не интересны,
+            // т.к. наличие только одной строки означает, что каждый элемент присутствует ТОЛЬКО в этой строке и объединять её
+            // ни с кем не потребуется.
+            for (String[] splitLine : splitLines) {
+                // Прекращаем проход по элементам, если они закончились и отфильтровываем пустые элементы
+                if (splitLine.length <= columnNumber || splitLine[columnNumber].length() < 3) continue;
+                Element element = new Element(columnNumber, splitLine[columnNumber]);
+                if (elementsFromColumns.get(element).size() < 2) elementsFromColumns.remove(element);
             }
         }
 
@@ -69,17 +85,15 @@ public class App {
         DisjointSets result = new DisjointSets();
         result.initDisjointSets(splitLines.size());
 
-        for (Set<Integer> elementLocatedIn : elementsLocatedIn.values()) {
+        for (Set<Integer> elementLocatedIn : elementsFromColumns.values()) {
             nextElement:
-            // Если элемент присутствует более чем в одной строке -> объединяем эти строки.
-            if (elementLocatedIn.size() > 1) {
-                for (int lineNumber : elementLocatedIn) {
-                    // Для этого пробегаемся по всем группам, чтобы найти ту, в которой находится элемент
-                    for (int groupNumber = 0; groupNumber < result.getNodes().size(); groupNumber++) {
-                        if (result.find(lineNumber).equals(groupNumber)) {
-                            result.unionAll(groupNumber, elementLocatedIn);
-                            break nextElement;
-                        }
+            // Объединяем группы строк
+            for (int lineNumber : elementLocatedIn) {
+                // Для этого пробегаемся по всем группам, чтобы найти ту, в которой находится элемент
+                for (int groupNumber = 0; groupNumber < result.getNodes().size(); groupNumber++) {
+                    if (result.find(lineNumber).equals(groupNumber)) {
+                        result.unionAll(groupNumber, elementLocatedIn);
+                        break nextElement;
                     }
                 }
             }
@@ -95,12 +109,13 @@ public class App {
 
         // Сортируем по количеству строк в группе для вывода
         List<Set<Integer>> sortedResult = groupedResult.values().stream().sorted((set1, set2) -> set2.size() - set1.size()).toList();
-        long multiStringGroups = groupedResult.values().stream().filter(it -> it.size() > 1).count();
+        long multiStringGroups = groupedResult.values().stream().filter(group -> group.size() > 1).count();
 
         System.out.println(">>> Формируем результирующий файл:" + new Date());
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
         writer.write("Групп с более чем одним элементом: " + multiStringGroups + "\n\n");
+        System.out.println("--- Групп с более чем одним элементом: " + multiStringGroups);
 
         for (int i = 0; i < sortedResult.size(); i++) {
             writer.write("Группа " + (i + 1) + "\n");
