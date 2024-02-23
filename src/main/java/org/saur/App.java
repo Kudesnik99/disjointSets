@@ -25,6 +25,7 @@ public class App {
         Map<Element, TreeSet<Integer>> elementsFromColumns = new HashMap<>();
         for (int columnNumber = 0; columnNumber < maxColumnsCount; columnNumber++) {
             for (int lineNumber = 0; lineNumber < splitLines.size(); lineNumber++) {
+
                 // Прекращаем проход по элементам, если они закончились (не самая длинная строка) и отфильтровываем пустые элементы
                 if (splitLines.get(lineNumber).length <= columnNumber || splitLines.get(lineNumber)[columnNumber].length() < 3) continue;
                 Element element = new Element(columnNumber, splitLines.get(lineNumber)[columnNumber]);
@@ -56,7 +57,7 @@ public class App {
                 // Для этого пробегаемся по всем группам, чтобы найти ту, в которой находится элемент
                 for (int groupNumber = 0; groupNumber < result.getNodes().size(); groupNumber++) {
                     if (result.find(lineNumber).equals(groupNumber)) {
-                        result.unionAll(groupNumber, elementLocatedIn);
+                        result.unionAll(elementLocatedIn, groupNumber);
                         break nextElement;
                     }
                 }

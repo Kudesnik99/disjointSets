@@ -45,7 +45,7 @@ public class DisjointSets {
         }
     }
 
-    public void unionAll(int rootU, Set<Integer> rootsV) {
-        rootsV.forEach(rootV -> union(rootU, rootV));
+    public void unionAll(Set<Integer> rootsU, int rootV) {
+        rootsU.forEach(rootU -> union(rootU, rootV));
     }
 }
