@@ -11,7 +11,7 @@ import java.util.zip.GZIPInputStream;
 
 public class InputOutput {
     public static Set<String> readLines(String[] args) throws IOException {
-        Pattern pattern = Pattern.compile("(\"\\d*\";)+(\"\\d*\")$");
+        Pattern pattern = Pattern.compile("\"\\d*\"\\d*\"");
         URL reference = new URL("https://github.com/PeacockTeam/new-job/releases/download/v1.0/lng-4.txt.gz");
 
         System.out.println(">>> Начало работы " + new Date());
@@ -37,7 +37,7 @@ public class InputOutput {
         try (BufferedReader reader = new BufferedReader(isr)) {
             // Строки вида "8383"200000741652251""79855053897"83100000580443402";"200000133000191"
             // являются некорректными и должны пропускаться. Поэтому matcher.
-            inputLines = reader.lines().filter(it -> pattern.matcher(it).matches()).collect(Collectors.toSet());
+            inputLines = reader.lines().filter(it -> !pattern.matcher(it).matches()).collect(Collectors.toSet());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -1,7 +1,6 @@
 package org.saur;
 
 import org.saur.data.Element;
-import org.saur.disjointset.DisjointSets;
 import org.saur.util.InputOutput;
 
 import java.util.*;
@@ -27,7 +26,8 @@ public class App {
             for (int lineNumber = 0; lineNumber < splitLines.size(); lineNumber++) {
 
                 // Прекращаем проход по элементам, если они закончились (не самая длинная строка) и отфильтровываем пустые элементы
-                if (splitLines.get(lineNumber).length <= columnNumber || splitLines.get(lineNumber)[columnNumber].length() < 3) continue;
+                if (splitLines.get(lineNumber).length <= columnNumber || splitLines.get(lineNumber)[columnNumber].length() < 3)
+                    continue;
                 Element element = new Element(columnNumber, splitLines.get(lineNumber)[columnNumber]);
                 elementsFromColumns.computeIfAbsent(element, key -> new TreeSet<>()).add(lineNumber);
             }
@@ -43,42 +43,46 @@ public class App {
             }
         }
         System.out.println(">>> Мапа подготовлена: " + new Date());
+        System.out.println(">>> Размер: " + elementsFromColumns.size());
 
+        List<Set<Integer>> groups = new ArrayList<>();     // Индекс - номер группы, значение - номера строк в ней
+        int[] linesInGroups = new int[inputLines.size()];  // Индекс - номер строки, значение - номер группы
+        Arrays.fill(linesInGroups, -1);                // Не распределённым строкам присваиваем номер группы -1
 
-        // Изначально заполняем результат так, как будто каждая строка находится в своей группе
-        // (т.е. просто инициализируем DisjointSets)
-        DisjointSets result = new DisjointSets();
-        result.initDisjointSets(splitLines.size());
-
+        // Раскладываем по группам связанные строки
         for (Set<Integer> elementLocatedIn : elementsFromColumns.values()) {
-            nextElement:
-            // Объединяем группы строк
-            for (int lineNumber : elementLocatedIn) {
-                // Для этого пробегаемся по всем группам, чтобы найти ту, в которой находится элемент
-                for (int groupNumber = 0; groupNumber < result.getNodes().size(); groupNumber++) {
-                    if (result.find(lineNumber).equals(groupNumber)) {
-                        result.unionAll(elementLocatedIn, groupNumber);
-                        break nextElement;
-                    }
-                }
+            int groupNumber = elementLocatedIn.stream()
+                    .filter(lineNumber -> (linesInGroups[lineNumber] >= 0))
+                    .map(lineNumber -> linesInGroups[lineNumber])
+                    .findFirst().orElse(-1);
+            if (groupNumber < 0) { // Ни одна из строк, в которой присутствует элемент не состоит ни в одной группе => создаём новую.
+                groups.add(new HashSet<>(elementLocatedIn));
+                elementLocatedIn.forEach(lineNumber -> linesInGroups[lineNumber] = groups.size() - 1);
+            } else { // Хотя бы одна строка, в которой присутствует элемент, уже распределена. Складываем в ту же группу остальные.
+                Set<Integer> group = groups.get(groupNumber);
+                elementLocatedIn.forEach(lineNumber -> {
+                    group.add(lineNumber);
+                    linesInGroups[lineNumber] = groupNumber;
+                });
             }
         }
-        System.out.println(">>> Разбиение произведено: " + new Date());
 
+        long multiStringGroups = groups.size();
 
-        // Раскладываем результат в мапу по группам
-        Map<Integer, Set<Integer>> groupedResult = new HashMap<>();
-        for (int i = 0; i < result.getNodes().size(); i++) {
-            groupedResult.computeIfAbsent(result.getNodes().get(i).getParentNode(), key -> new HashSet<>()).add(i);
+        // Создаём группы для индивидуальных строк. По одной на строку.
+        for (int lineNumber = 0; lineNumber < linesInGroups.length; lineNumber++) {
+            if (linesInGroups[lineNumber] < 0) {
+                Set<Integer> newGroup = new HashSet<>();
+                newGroup.add(lineNumber);
+                groups.add(newGroup);
+            }
         }
-        // Сортируем по количеству строк в группе для вывода
-        List<Set<Integer>> sortedResult = groupedResult.values().stream().sorted((set1, set2) -> set2.size() - set1.size()).toList();
-        long multiStringGroups = groupedResult.values().stream().filter(group -> group.size() > 1).count();
+        System.out.println(">>> Разбиение по группам произведено: " + new Date());
 
+        List<Set<Integer>> sortedResult = groups.stream().sorted((set1, set2) -> set2.size() - set1.size()).toList();
 
         System.out.println(">>> Формируем результирующий файл:" + new Date());
         InputOutput.writeResult(splitLines, sortedResult, multiStringGroups, outputFileName);
-
         System.out.println(">>> Окончание работы: " + new Date());
     }
 }
