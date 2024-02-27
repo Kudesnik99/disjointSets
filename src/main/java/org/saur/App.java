@@ -58,16 +58,23 @@ public class App {
             if (groupNumber < 0) { // Ни одна из строк, в которой присутствует элемент не состоит ни в одной группе => создаём новую.
                 groups.add(new HashSet<>(elementLocatedIn));
                 elementLocatedIn.forEach(lineNumber -> linesInGroups[lineNumber] = groups.size() - 1);
-            } else { // Хотя бы одна строка, в которой присутствует элемент, уже распределена. Складываем в ту же группу остальные.
-                Set<Integer> group = groups.get(groupNumber);
-                elementLocatedIn.forEach(lineNumber -> {
-                    group.add(lineNumber);
-                    linesInGroups[lineNumber] = groupNumber;
-                });
+            } else { // Хотя бы одна строка, в которой присутствует элемент, уже распределена (состоит в группе).
+                List<Integer> groupNumbers = elementLocatedIn.stream()
+                        .filter(lineNumber -> linesInGroups[lineNumber] >= 0) // Распределённые строки
+                        .map(lineNumber -> linesInGroups[lineNumber])
+                        .distinct().toList();
+                if (groupNumbers.size() > 1) {
+                    mergeGroups(groupNumber, groupNumbers.subList(1, groupNumbers.size()), linesInGroups, groups);
+                }
+
+                elementLocatedIn.stream()
+                        .filter(lineNumber -> (linesInGroups[lineNumber] < 0)) // Не распределённые строки
+                        .forEach(lineNumber -> {
+                            groups.get(groupNumber).add(lineNumber);
+                            linesInGroups[lineNumber] = groupNumber;
+                        });
             }
         }
-
-        long multiStringGroups = groups.size();
 
         // Создаём группы для индивидуальных строк. По одной на строку.
         for (int lineNumber = 0; lineNumber < linesInGroups.length; lineNumber++) {
@@ -79,10 +86,24 @@ public class App {
         }
         System.out.println(">>> Разбиение по группам произведено: " + new Date());
 
-        List<Set<Integer>> sortedResult = groups.stream().sorted((set1, set2) -> set2.size() - set1.size()).toList();
+        // Сортируем по количеству строк в группе для вывода
+        List<Set<Integer>> sortedResult = groups.stream().filter(Objects::nonNull).sorted((set1, set2) -> set2.size() - set1.size()).toList();
+        long multiStringGroups = sortedResult.stream().filter(group -> group.size() > 1).count();
 
         System.out.println(">>> Формируем результирующий файл:" + new Date());
         InputOutput.writeResult(splitLines, sortedResult, multiStringGroups, outputFileName);
         System.out.println(">>> Окончание работы: " + new Date());
+    }
+
+    private static void mergeGroups(int groupNumber, List<Integer> groupNumbers, int[] linesInGroups, List<Set<Integer>> groups) {
+        if (groupNumbers.size() == 1) {
+            if (groupNumber == groupNumbers.get(0)) return;
+            groups.get(groupNumbers.get(0)).forEach(it -> linesInGroups[it] = groupNumber);
+            groups.get(groupNumber).addAll(groups.get(groupNumbers.get(0)));
+            groups.set(groupNumbers.get(0), null);
+        } else {
+            mergeGroups(groupNumbers.get(0), groupNumbers.subList(1, groupNumbers.size()), linesInGroups, groups);
+        }
+
     }
 }
