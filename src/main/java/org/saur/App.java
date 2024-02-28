@@ -96,14 +96,11 @@ public class App {
     }
 
     private static void mergeGroups(int groupNumber, List<Integer> groupNumbers, int[] linesInGroups, List<Set<Integer>> groups) {
-        if (groupNumbers.size() == 1) {
-            if (groupNumber == groupNumbers.get(0)) return;
-            groups.get(groupNumbers.get(0)).forEach(it -> linesInGroups[it] = groupNumber);
-            groups.get(groupNumber).addAll(groups.get(groupNumbers.get(0)));
-            groups.set(groupNumbers.get(0), null);
-        } else {
-            mergeGroups(groupNumbers.get(0), groupNumbers.subList(1, groupNumbers.size()), linesInGroups, groups);
+        for (Integer currentGroupNumber : groupNumbers) {
+            if (groupNumber == currentGroupNumber) continue;
+            groups.get(currentGroupNumber).forEach(it -> linesInGroups[it] = groupNumber);
+            groups.get(groupNumber).addAll(groups.get(currentGroupNumber));
+            groups.set(currentGroupNumber, null);
         }
-
     }
 }
